@@ -17,11 +17,4 @@
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true" />
 
-    <gumanchu.rosiecontrol.CardboardOverlayView
-        android:id="@+id/overlay"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentTop="true" />
-
 </RelativeLayout>
