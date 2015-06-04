@@ -1,10 +1,14 @@
 package gumanchu.rosiecontrol;
 
+import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.opengl.GLES20;
+import android.opengl.GLUtils;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,6 +23,7 @@ import com.google.vrtoolkit.cardboard.CardboardView;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -38,8 +43,8 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
     private static final String TAG = "RosieControl";
 
     public static final String SERVERIP = "98.102.8.76";
-    public static final int VIDEOPORT = 4321;
-    public static final int CONTROLPORT = 4322;
+    public static final int VIDEOPORT = 1234;
+    public static final int CONTROLPORT = 1235;
     private static final float ALPHA = 0.2f;
 
     /*
@@ -115,7 +120,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
     protected void onResume() {
         super.onResume();
         cardboardView.onResume();
-//        AsyncServiceHelper.initOpenCV(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
+        AsyncServiceHelper.initOpenCV(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
 
 //        senManager.registerListener(this, accel, SensorManager.SENSOR_DELAY_NORMAL);
 //        senManager.registerListener(this, mag, SensorManager.SENSOR_DELAY_NORMAL);
@@ -163,7 +168,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
 
 
         streamer = new RosieTask();
-//        streamer.execute();
+        streamer.execute();
 //
         controller = new ControlRunnable();
 //        Thread t = new Thread(controller);
@@ -258,6 +263,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
 
                 in = new DataInputStream(s.getInputStream());
 
+                TextureHelper.setStreaming(true);
                 while (s.isConnected()) {
 
                     bytes = 0;
@@ -282,6 +288,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
                     Utils.matToBitmap(ret, bm);
                     publishProgress(bm);
                 }
+                TextureHelper.setStreaming(false);
                 s.close();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -294,6 +301,8 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
         @Override
         protected void onProgressUpdate(Bitmap ... item) {
 //            imView.setImageBitmap(item[0]);
+//            TextureHelper.setBitmap(item[0]);
+            CardboardRenderer.stream= item[0];
         }
 
     }
