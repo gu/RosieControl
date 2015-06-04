@@ -10,6 +10,11 @@ import com.google.vrtoolkit.cardboard.Eye;
 import com.google.vrtoolkit.cardboard.HeadTransform;
 import com.google.vrtoolkit.cardboard.Viewport;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
+
 import javax.microedition.khronos.egl.EGLConfig;
 
 /**
@@ -20,46 +25,66 @@ import javax.microedition.khronos.egl.EGLConfig;
 public class CardboardRenderer implements CardboardView.StereoRenderer {
     private static final String TAG = "CardboardRenderer";
 
-    private Triangle mTriangleLeft;
-    private Triangle mTriangleRight;
+    private final float[] mtrxProjection = new float[16];
+    private final float[] mtrxView = new float[16];
+    private final float[] mtrxProjectionAndView = new float[16];
 
-    // mMVPMatrix is an abbreviation for "Model View Projection Matrix"
-    private final float[] mMVPMatrix = new float[16];
-    private final float[] mProjectionMatrix = new float[16];
-    private final float[] mViewMatrix = new float[16];
-    private final float[] mRotationMatrix = new float[16];
+    public static float vertices[];
+    public static short indices[];
+    public FloatBuffer vertexBuffer;
+    public ShortBuffer drawListBuffer;
 
-    private float mAngle;
+    float   mScreenWidth = 1280;
+    float   mScreenHeight = 768;
+
+    Context mContext;
+    long mLastTime;
 
 
-    public CardboardRenderer(Context context) {
+    public CardboardRenderer(Context context)
+        {
+            mContext = context;
+            mLastTime = System.currentTimeMillis() + 100;
 
     }
 
     @Override
-    public void onSurfaceCreated(EGLConfig config) {
+    public void onSurfaceCreated(EGLConfig config) {// Create the triangle
+        SetupTriangle();
 
-        // Set the background frame color
-        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1);
 
-        mTriangleLeft = new Triangle(0);
-        mTriangleRight = new Triangle(1);
+        int vertexShader = GLUtilities.loadShader(GLES20.GL_VERTEX_SHADER, GLUtilities.vs_SolidColor);
+        int fragmentShader = GLUtilities.loadShader(GLES20.GL_FRAGMENT_SHADER, GLUtilities.fs_SolidColor);
 
+        GLUtilities.sp_SolidColor = GLES20.glCreateProgram();             // create empty OpenGL ES Program
+        GLES20.glAttachShader(GLUtilities.sp_SolidColor, vertexShader);   // add the vertex shader to program
+        GLES20.glAttachShader(GLUtilities.sp_SolidColor, fragmentShader); // add the fragment shader to program
+        GLES20.glLinkProgram(GLUtilities.sp_SolidColor);                  // creates OpenGL ES program executables
+
+        GLES20.glUseProgram(GLUtilities.sp_SolidColor);
 
     }
 
     @Override
     public void onSurfaceChanged(int width, int height) {
+        mScreenWidth = width;
+        mScreenHeight = height;
 
-        // Adjust the viewport based on geometry changes,
-        // such as screen rotation
-        GLES20.glViewport(0, 0, width, height);
+        GLES20.glViewport(0, 0, (int)mScreenWidth, (int)mScreenHeight);
 
-        float ratio = (float) width / height;
+        for(int i=0;i<16;i++)
+        {
+            mtrxProjection[i] = 0.0f;
+            mtrxView[i] = 0.0f;
+            mtrxProjectionAndView[i] = 0.0f;
+        }
 
-        // this projection matrix is applied to object coordinates
-        // in the onDrawFrame() method
-        Matrix.frustumM(mProjectionMatrix, 0, -ratio, ratio, -1, 1, 3, 7);
+        Matrix.orthoM(mtrxProjection, 0, 0f, mScreenWidth, 0.0f, mScreenHeight, 0, 50);
+
+        Matrix.setLookAtM(mtrxView, 0, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
+
+        Matrix.multiplyMM(mtrxProjectionAndView, 0, mtrxProjection, 0, mtrxView, 0);
 
     }
 
@@ -81,51 +106,64 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
 
     @Override
     public void onDrawEye(Eye eye) {
-        float[] scratch = new float[16];
+        long now = System.currentTimeMillis();
 
-        // Draw background color
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+        if (mLastTime > now) return;
 
-        // Set the camera position (View matrix)
-        Matrix.setLookAtM(mViewMatrix, 0, 0, 0, -3, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
+        Render(mtrxProjectionAndView);
 
-        // Calculate the projection and view transformation
-        Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
-
-
-        // Create a rotation for the triangle
-
-        // Use the following code to generate constant rotation.
-        // Leave this code out when using TouchEvents.
-        // long time = SystemClock.uptimeMillis() % 4000L;
-        // float angle = 0.090f * ((int) time);
-
-        Matrix.setRotateM(mRotationMatrix, 0, mAngle, 0, 0, 1.0f);
-
-        // Combine the rotation matrix with the projection and camera view
-        // Note that the mMVPMatrix factor *must be first* in order
-        // for the matrix multiplication product to be correct.
-        Matrix.multiplyMM(scratch, 0, mMVPMatrix, 0, mRotationMatrix, 0);
-
-        // Draw triangle
-        mTriangleRight.draw(scratch);
-        mTriangleLeft.draw(scratch);
+        mLastTime = now;
 
 
     }
 
+    private void Render(float[] m) {
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
+        int mPositionHandle = GLES20.glGetAttribLocation(GLUtilities.sp_SolidColor, "vPosition");
 
-    /**
-     * Utility method for compiling a OpenGL shader.
-     *
-     * <p><strong>Note:</strong> When developing shaders, use the checkGlError()
-     * method to debug shader coding errors.</p>
-     *
-     * @param type - Vertex or fragment shader type.
-     * @param shaderCode - String containing the shader code.
-     * @return - Returns an id for the shader.
-     */
+        GLES20.glEnableVertexAttribArray(mPositionHandle);
+
+        GLES20.glVertexAttribPointer(mPositionHandle, 3,
+                GLES20.GL_FLOAT, false,
+                0, vertexBuffer);
+
+        int mtrxhandle = GLES20.glGetUniformLocation(GLUtilities.sp_SolidColor, "uMVPMatrix");
+
+        GLES20.glUniformMatrix4fv(mtrxhandle, 1, false, m, 0);
+
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, indices.length,
+                GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
+
+        GLES20.glDisableVertexAttribArray(mPositionHandle);
+
+    }
+
+    public void SetupTriangle()
+    {
+        vertices = new float[] {
+                        0.0f, 600f, 0.0f,
+                        0.0f, 0f, 0.0f,
+                        600f, 0f, 0.0f,
+                        600f, 600f, 0.0f,
+                };
+
+        indices = new short[] {0, 1, 2, 0, 2, 3}; // loop in the android official tutorial opengles why different order.
+
+        ByteBuffer bb = ByteBuffer.allocateDirect(vertices.length * 4);
+        bb.order(ByteOrder.nativeOrder());
+        vertexBuffer = bb.asFloatBuffer();
+        vertexBuffer.put(vertices);
+        vertexBuffer.position(0);
+
+        ByteBuffer dlb = ByteBuffer.allocateDirect(indices.length * 2);
+        dlb.order(ByteOrder.nativeOrder());
+        drawListBuffer = dlb.asShortBuffer();
+        drawListBuffer.put(indices);
+        drawListBuffer.position(0);
+
+    }
+
     public static int loadShader(int type, String shaderCode){
 
         // create a vertex shader type (GLES20.GL_VERTEX_SHADER)
@@ -139,40 +177,12 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
         return shader;
     }
 
-    /**
-     * Utility method for debugging OpenGL calls. Provide the name of the call
-     * just after making it:
-     *
-     * <pre>
-     * mColorHandle = GLES20.glGetUniformLocation(mProgram, "vColor");
-     * MyGLRenderer.checkGlError("glGetUniformLocation");</pre>
-     *
-     * If the operation is not successful, the check throws an error.
-     *
-     * @param glOperation - Name of the OpenGL call to check.
-     */
     public static void checkGlError(String glOperation) {
         int error;
         while ((error = GLES20.glGetError()) != GLES20.GL_NO_ERROR) {
             Log.e(TAG, glOperation + ": glError " + error);
             throw new RuntimeException(glOperation + ": glError " + error);
         }
-    }
-
-    /**
-     * Returns the rotation angle of the triangle shape (mTriangleLeft).
-     *
-     * @return - A float representing the rotation angle.
-     */
-    public float getAngle() {
-        return mAngle;
-    }
-
-    /**
-     * Sets the rotation angle of the triangle shape (mTriangleLeft).
-     */
-    public void setAngle(float angle) {
-        mAngle = angle;
     }
 
 }

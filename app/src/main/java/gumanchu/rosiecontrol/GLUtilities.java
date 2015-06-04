@@ -4,10 +4,10 @@ import android.opengl.GLES20;
 
 public class GLUtilities {
 
-    /// Program variables
+    // Program variables
     public static int sp_SolidColor;
-    public static int sp_Image;
 
+    public static int sp_Image;
 
     /* SHADER Solid
      *
@@ -15,8 +15,8 @@ public class GLUtilities {
      *
      */
     public static final String vs_SolidColor =
-            "uniform 	mat4 		uMVPMatrix;" +
-                    "attribute 	vec4 		vPosition;" +
+            "uniform    mat4        uMVPMatrix;" +
+                    "attribute  vec4        vPosition;" +
                     "void main() {" +
                     "  gl_Position = uMVPMatrix * vPosition;" +
                     "}";
@@ -28,11 +28,11 @@ public class GLUtilities {
                     "}";
 
     /* SHADER Image
-     *
-     * This shader is for rendering 2D images straight from a texture
-     * No additional effects.
-     *
-     */
+ *
+ * This shader is for rendering 2D images straight from a texture
+ * No additional effects.
+ *
+ */
     public static final String vs_Image =
             "uniform mat4 uMVPMatrix;" +
                     "attribute vec4 vPosition;" +
@@ -42,7 +42,6 @@ public class GLUtilities {
                     "  gl_Position = uMVPMatrix * vPosition;" +
                     "  v_texCoord = a_texCoord;" +
                     "}";
-
     public static final String fs_Image =
             "precision mediump float;" +
                     "varying vec2 v_texCoord;" +
@@ -50,8 +49,6 @@ public class GLUtilities {
                     "void main() {" +
                     "  gl_FragColor = texture2D( s_texture, v_texCoord );" +
                     "}";
-
-
 
     public static int loadShader(int type, String shaderCode){
 
