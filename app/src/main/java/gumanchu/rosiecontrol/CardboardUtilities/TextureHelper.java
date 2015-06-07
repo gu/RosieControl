@@ -1,4 +1,4 @@
-package gumanchu.rosiecontrol;
+package gumanchu.rosiecontrol.CardboardUtilities;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -13,7 +13,9 @@ public class TextureHelper {
     static Bitmap bitmap;
     static boolean streaming;
 
-    public static int loadTexture(final Context context, final int resourceId, Bitmap bmp)
+    public static Bitmap frame = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
+
+    public static int loadTexture(final Context context, final int resourceId)
     {
         final int[] textureHandle = new int[1];
 
@@ -25,13 +27,11 @@ public class TextureHelper {
             options.inScaled = false;	// No pre-scaling
 
             // Read in the resource
-            if(!streaming) {
-                Log.i(TAG, "Streaming: " + streaming);
-                bitmap = BitmapFactory.decodeResource(context.getResources(), resourceId, options);
+            if (CardboardRenderer.streaming) {
+                bitmap = Bitmap.createBitmap(frame);
             } else {
-                bitmap = bmp;
+                bitmap = BitmapFactory.decodeResource(context.getResources(), resourceId, options);
             }
-
 
             // Bind to the texture in OpenGL
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0]);
@@ -44,7 +44,7 @@ public class TextureHelper {
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
 
             // Recycle the bitmap, since its data has been loaded into OpenGL.
-            bitmap.recycle();
+//            bitmap.recycle();
         }
 
         if (textureHandle[0] == 0)
@@ -56,7 +56,7 @@ public class TextureHelper {
     }
 
     public static void setBitmap(Bitmap bmp) {
-        bitmap = bmp;
+        frame = Bitmap.createBitmap(bmp);
     }
 
     public static void setStreaming(boolean s) {

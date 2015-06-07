@@ -1,22 +1,23 @@
 package gumanchu.rosiecontrol;
 
-import android.content.Context;
+import android.app.AlertDialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.opengl.GLES20;
-import android.opengl.GLUtils;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.widget.ImageView;
 
 import com.google.vrtoolkit.cardboard.CardboardActivity;
 import com.google.vrtoolkit.cardboard.CardboardView;
@@ -37,14 +38,14 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.text.DecimalFormat;
 
+import gumanchu.rosiecontrol.CardboardUtilities.CardboardRenderer;
+import gumanchu.rosiecontrol.CardboardUtilities.TextureHelper;
+
 @SuppressWarnings("deprecation")
 public class MainActivity extends CardboardActivity implements SensorEventListener {
 
     private static final String TAG = "RosieControl";
 
-    public static final String SERVERIP = "98.102.8.76";
-    public static final int VIDEOPORT = 1234;
-    public static final int CONTROLPORT = 1235;
     private static final float ALPHA = 0.2f;
 
     /*
@@ -54,14 +55,25 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
     Mat img, tmp, ret;
     Bitmap bm;
     long imgSize;
-    int size;
-    int bytes = 0;
+    int bytes, size;
     byte[] data;
 
-    // Used for ControlTask
     int currentKey, previousKey;
-    ControlRunnable controller;
-    RosieTask streamer;
+
+    // BLUETOOTH VARS
+    private static final int REQUEST_ENABLE_BT = 1;
+    private BluetoothAdapter mBluetoothAdapter = null;
+    private BluetoothSocket mBluetoothSocket = null;
+    private DataOutputStream mOutStream = null;
+    private DataInputStream mInStream = null;
+    ControlBTHRunnable controlBTH;
+    RosieBTHTask videoBTH;
+
+    // IP VARS
+    ControlIPRunnable controlIP;
+    RosieIPTask videoIP;
+    DataInputStream in;
+    DataOutputStream out;
 
     // Sensor vars.
     private SensorManager senManager;
@@ -71,16 +83,11 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
     float[] mGeomagnetic;
     DecimalFormat dFormat;
 
-    // Vars for Data transfer
-    DataInputStream in;
-    DataOutputStream out;
 
 
     //TODO: START OF CARD?BOARD VARS
 
     CardboardView cardboardView;
-
-
 
     //TODO: END OF CARDBOARD VARS
 
@@ -90,7 +97,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS:
                     Log.i(TAG, "OpenCV Manager Connected");
-                    displayView();
+                    startView();
                     break;
                 case LoaderCallbackInterface.INIT_FAILED:
                     Log.i(TAG,"Init Failed");
@@ -117,17 +124,6 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        cardboardView.onResume();
-        AsyncServiceHelper.initOpenCV(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
-
-//        senManager.registerListener(this, accel, SensorManager.SENSOR_DELAY_NORMAL);
-//        senManager.registerListener(this, mag, SensorManager.SENSOR_DELAY_NORMAL);
-
-    }
-
-    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -135,6 +131,9 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
         cardboardView = (CardboardView) findViewById(R.id.cardboard_view);
         cardboardView.setRenderer(new CardboardRenderer(this));
         setCardboardView(cardboardView);
+
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        CheckBTState();
 
 //        senManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 //        accel = senManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -147,32 +146,90 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
-        cardboardView.onPause();
-//        senManager.unregisterListener(this);
+    protected void onResume() {
+        super.onResume();
+        cardboardView.onResume();
+        AsyncServiceHelper.initOpenCV(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
+
+//        senManager.registerListener(this, accel, SensorManager.SENSOR_DELAY_NORMAL);
+//        senManager.registerListener(this, mag, SensorManager.SENSOR_DELAY_NORMAL);
+
     }
 
-    public void displayView() {
+    public void startView() {
 //        imView = (ImageView) findViewById(R.id.imView);
         img = new Mat(480, 640, CvType.CV_8UC3);
         ret = new Mat(480, 640, CvType.CV_8UC3);
         tmp = new Mat();
         imgSize = img.total() * img.elemSize();
 
-        currentKey = 0;
-        previousKey = 1;
 
         bm = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
 
 
+        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(Constants.SERVER_ADDRESS_BLUETOOTH);
+        try {
+            mBluetoothSocket = device.createRfcommSocketToServiceRecord(Constants.DEVICE_UUID);
+        } catch (IOException e) {
+            AlertBox("Fatal Error", "In onResume() and socket create failed: " + e.getMessage() + ".");
+        }
+        mBluetoothAdapter.cancelDiscovery();
+        try {
+            mBluetoothSocket.connect();
+        } catch (IOException e) {
+            try {
+                mBluetoothSocket.close();
+            } catch (IOException e2) {
+                AlertBox("Fatal Error", "In onResume() and unable to close socket during connection failure" + e2.getMessage() + ".");
+            }
+        }
+        try {
+            mOutStream = new DataOutputStream(mBluetoothSocket.getOutputStream());
+            mInStream = new DataInputStream(mBluetoothSocket.getInputStream());
+        } catch (IOException e) {
+            AlertBox("Fatal Error", "In onResume() and output stream creation failed:" + e.getMessage() + ".");
+        }
 
-        streamer = new RosieTask();
-        streamer.execute();
+
+        currentKey = 0;
+        previousKey = 1;
+
+
+        // IP IMPLEMENTATION
+//        videoIP = new RosieIPTask();
+//        videoIP.execute();
 //
-        controller = new ControlRunnable();
-//        Thread t = new Thread(controller);
-//        t.start();
+//        controlIP = new ControlIPRunnable();
+//        Thread controlThreadIP = new Thread(controlIP);
+//        controlThreadIP.start();
+
+        //BTH IMPLEMENTATION
+        videoBTH = new RosieBTHTask();
+        videoBTH.execute();
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        cardboardView.onPause();
+//        senManager.unregisterListener(this);
+
+
+
+        if (mOutStream != null) {
+            try {
+                mOutStream.flush();
+            } catch (IOException e) {
+                AlertBox("Fatal Error", "In onPause() and failed to flush output stream: " + e.getMessage() + ".");
+            }
+        }
+
+        try     {
+            mBluetoothSocket.close();
+        } catch (IOException e2) {
+            AlertBox("Fatal Error", "In onPause() and failed to close socket." + e2.getMessage() + ".");
+        }
     }
 
 
@@ -222,7 +279,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
         return output;
     }
 
-    public class ControlRunnable implements Runnable {
+    public class ControlIPRunnable implements Runnable {
         @Override
         public void run() {
 
@@ -231,8 +288,8 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
             Handler controlHandle = new Handler();
 
             try {
-                InetAddress serverAddr = InetAddress.getByName(SERVERIP);
-                Socket s = new Socket(serverAddr, CONTROLPORT);
+                InetAddress serverAddr = InetAddress.getByName(Constants.SERVER_IP);
+                Socket s = new Socket(serverAddr, Constants.CONTROL_PORT);
 
                 out = new DataOutputStream(s.getOutputStream());
 
@@ -242,7 +299,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
                         out.flush();
                     }
                     previousKey = currentKey;
-                    controlHandle.postDelayed(controller, 100);
+                    controlHandle.postDelayed(controlIP, 100);
                 }
 
                 s.close();
@@ -253,13 +310,36 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
         }
     }
 
-    class RosieTask extends AsyncTask<Void, Bitmap, Void> {
+    public class ControlBTHRunnable implements Runnable {
+        @Override
+        public void run() {
+
+            Looper.prepare();
+            Handler controlHandle = new Handler();
+
+            try {
+                while (mBluetoothSocket.isConnected() && currentKey != KeyEvent.KEYCODE_ESCAPE) {
+                    if (currentKey != previousKey) {
+                        mOutStream.writeInt(currentKey);
+                        mOutStream.flush();
+                    }
+                    previousKey = currentKey;
+                    controlHandle.postDelayed(controlBTH, 100);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+
+    public class RosieIPTask extends AsyncTask<Void, Bitmap, Void> {
         @Override
         protected Void doInBackground(Void ... unused) {
 
             try {
-                InetAddress serverAddr = InetAddress.getByName(SERVERIP);
-                Socket s = new Socket(serverAddr, VIDEOPORT );
+                InetAddress serverAddr = InetAddress.getByName(Constants.SERVER_IP);
+                Socket s = new Socket(serverAddr, Constants.VIDEO_PORT);
 
                 in = new DataInputStream(s.getInputStream());
 
@@ -302,9 +382,58 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
         protected void onProgressUpdate(Bitmap ... item) {
 //            imView.setImageBitmap(item[0]);
 //            TextureHelper.setBitmap(item[0]);
-            CardboardRenderer.stream= item[0];
         }
 
+    }
+
+    public class RosieBTHTask extends AsyncTask<Void, Bitmap, Void> {
+        @Override
+        protected Void doInBackground(Void ... unused) {
+            try {
+                while (mBluetoothSocket.isConnected() && currentKey != KeyEvent.KEYCODE_ESCAPE) {
+                    CardboardRenderer.streaming = true;
+                    bytes = 0;
+
+                    size = mInStream.readInt();
+                    data = new byte[size];
+
+                    for (int i = 0; i < size; i+= bytes) {
+                        bytes = mInStream.read(data, i, size - i);
+                    }
+
+//                    if (currentKey != previousKey) {
+//                        mOutStream.writeInt(currentKey);
+//                        mOutStream.flush();
+//                    }
+//                    previousKey = currentKey;
+
+                    Log.i(TAG, "SIZE: " + size);
+
+                    tmp = new Mat(1, size, CvType.CV_8UC1);
+                    tmp.put(0, 0, data);
+
+                    img = Highgui.imdecode(tmp, Highgui.CV_LOAD_IMAGE_UNCHANGED);
+
+                    Imgproc.cvtColor(img, ret, Imgproc.COLOR_RGB2BGR);
+
+                    Utils.matToBitmap(ret, bm);
+                    publishProgress(bm);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            CardboardRenderer.streaming = false;
+
+            return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(Bitmap ... item) {
+//            imView.setImageBitmap(item[0]);
+//            TextureHelper.setBitmap(item[0]);
+            TextureHelper.setBitmap(item[0]);
+        }
     }
 
     @Override
@@ -366,25 +495,30 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
 
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
+    private void CheckBTState() {
+        // Check for Bluetooth support and then check to make sure it is turned on
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        // Emulator doesn't support Bluetooth and will return null
+        if(mBluetoothAdapter ==null) {
+            AlertBox("Fatal Error", "Bluetooth Not supported. Aborting.");
+        } else {
+            if (!mBluetoothAdapter.isEnabled()) {
+                //Prompt user to turn on Bluetooth
+                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            }
         }
-
-        return super.onOptionsItemSelected(item);
     }
+
+    public void AlertBox( String title, String message ){
+        new AlertDialog.Builder(this)
+                .setTitle( title )
+                .setMessage( message + " Press OK to exit." )
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface arg0, int arg1) {
+                        finish();
+                    }
+                }).show();
+    }
+
 }

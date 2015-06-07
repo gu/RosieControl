@@ -1,7 +1,6 @@
-package gumanchu.rosiecontrol;
+package gumanchu.rosiecontrol.CardboardUtilities;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
 
@@ -15,6 +14,8 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
+
+import gumanchu.rosiecontrol.R;
 
 /**
  * Renderer for stuff
@@ -52,7 +53,7 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
     int mPointProgramHandle;
     private int mTextureDataHandle;
 
-    static Bitmap stream =  Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
+    public static boolean streaming = false;
 
 
     public CardboardRenderer(Context context) {
@@ -158,9 +159,10 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
         final int pointVertexShaderHandle = ShaderHelper.compileShader(GLES20.GL_VERTEX_SHADER, pointVertexShader);
         final int pointFragmentShaderHandle = ShaderHelper.compileShader(GLES20.GL_FRAGMENT_SHADER, pointFragmentShader);
         mPointProgramHandle = ShaderHelper.createAndLinkProgram(pointVertexShaderHandle, pointFragmentShaderHandle,
-                new String[] {"a_Position"});
+                new String[]{"a_Position"});
 
-        mTextureDataHandle = TextureHelper.loadTexture(mActivityContext, R.drawable.sad_danbo, stream);
+
+        mTextureDataHandle = TextureHelper.loadTexture(mActivityContext, R.drawable.sad_danbo);
 
     }
 
@@ -198,9 +200,10 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
     @Override
     public void onDrawEye(Eye eye) {
 
-        mTextureDataHandle = TextureHelper.loadTexture(mActivityContext, R.drawable.ossim, stream);
-
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+
+
+        mTextureDataHandle = TextureHelper.loadTexture(mActivityContext, R.drawable.sad_danbo);
 
         // Do a complete rotation every 10 seconds.
 //        long time = SystemClock.uptimeMillis() % 10000L;
@@ -221,6 +224,7 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
 
         // Set the active texture unit to texture unit 0.
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+
 
         // Bind the texture to this unit.
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureDataHandle);

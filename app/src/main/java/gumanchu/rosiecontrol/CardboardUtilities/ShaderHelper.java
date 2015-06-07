@@ -1,4 +1,4 @@
-package gumanchu.rosiecontrol;
+package gumanchu.rosiecontrol.CardboardUtilities;
 
 import android.opengl.GLES20;
 import android.util.Log;
