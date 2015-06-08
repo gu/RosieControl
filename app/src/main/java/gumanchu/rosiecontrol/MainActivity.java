@@ -51,7 +51,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
     /*
      * Vars for VideoTask
      */
-//    private ImageView imView;
+    private ImageView imView;
     Mat img, tmp, ret;
     Bitmap bm;
     long imgSize;
@@ -128,6 +128,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
         cardboardView = (CardboardView) findViewById(R.id.cardboard_view);
         cardboardView.setRenderer(new CardboardRenderer(this));
         setCardboardView(cardboardView);
@@ -148,7 +149,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
     @Override
     protected void onResume() {
         super.onResume();
-        cardboardView.onResume();
+//        cardboardView.onResume();
         AsyncServiceHelper.initOpenCV(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
 
 //        senManager.registerListener(this, accel, SensorManager.SENSOR_DELAY_NORMAL);
@@ -157,6 +158,8 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
     }
 
     public void startView() {
+
+
 //        imView = (ImageView) findViewById(R.id.imView);
         img = new Mat(480, 640, CvType.CV_8UC3);
         ret = new Mat(480, 640, CvType.CV_8UC3);
@@ -206,6 +209,10 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
         //BTH IMPLEMENTATION
         videoBTH = new RosieBTHTask();
         videoBTH.execute();
+
+        controlBTH = new ControlBTHRunnable();
+        Thread controlThreadBTH = new Thread(controlBTH);
+        controlThreadBTH.start();
 
     }
 
@@ -366,6 +373,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
                     Imgproc.cvtColor(img, ret, Imgproc.COLOR_RGB2BGR);
 
                     Utils.matToBitmap(ret, bm);
+                    TextureHelper.setMat(ret);
                     publishProgress(bm);
                 }
                 TextureHelper.setStreaming(false);
@@ -380,7 +388,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
 
         @Override
         protected void onProgressUpdate(Bitmap ... item) {
-//            imView.setImageBitmap(item[0]);
+            imView.setImageBitmap(item[0]);
 //            TextureHelper.setBitmap(item[0]);
         }
 
@@ -416,8 +424,9 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
 
                     Imgproc.cvtColor(img, ret, Imgproc.COLOR_RGB2BGR);
 
-                    Utils.matToBitmap(ret, bm);
-                    publishProgress(bm);
+//                    Utils.matToBitmap(ret, bm);
+                    TextureHelper.setMat(ret);
+//                    publishProgress(bm);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -432,7 +441,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
         protected void onProgressUpdate(Bitmap ... item) {
 //            imView.setImageBitmap(item[0]);
 //            TextureHelper.setBitmap(item[0]);
-            TextureHelper.setBitmap(item[0]);
+//            TextureHelper.setBitmap(item[0]);
         }
     }
 

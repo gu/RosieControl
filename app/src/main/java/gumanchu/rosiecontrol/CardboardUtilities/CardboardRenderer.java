@@ -203,8 +203,9 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
 
-        mTextureDataHandle = TextureHelper.loadTexture(mActivityContext, R.drawable.sad_danbo);
+//        mTextureDataHandle = TextureHelper.loadTexture(mActivityContext, R.drawable.sad_danbo);
 
+        mTextureDataHandle = TextureHelper.loadMatTexture();
         // Do a complete rotation every 10 seconds.
 //        long time = SystemClock.uptimeMillis() % 10000L;
 //        float angleInDegrees = (360.0f / 10000.0f) * ((int) time);
@@ -235,6 +236,8 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
         Matrix.setIdentityM(mModelMatrix, 0);
         Matrix.translateM(mModelMatrix, 0, 0.0f, 0.0f, -5.0f);
         drawCube();
+        int[] textures = {mTextureDataHandle};
+        GLES20.glDeleteTextures(1, textures, 0);
     }
 
     private void drawCube()
