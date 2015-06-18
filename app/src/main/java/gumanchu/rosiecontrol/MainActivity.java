@@ -7,10 +7,6 @@ import android.bluetooth.BluetoothSocket;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -42,23 +38,20 @@ import gumanchu.rosiecontrol.CardboardUtilities.CardboardRenderer;
 import gumanchu.rosiecontrol.CardboardUtilities.TextureHelper;
 
 @SuppressWarnings("deprecation")
-public class MainActivity extends CardboardActivity implements SensorEventListener {
+public class MainActivity extends CardboardActivity {
 
     private static final String TAG = "RosieControl";
-
-    private static final float ALPHA = 0.2f;
 
     /*
      * Vars for VideoTask
      */
-    private ImageView imView;
     Mat img, tmp, ret;
     Bitmap bm;
     long imgSize;
     int bytes, size;
     byte[] data;
 
-    int currentKey, previousKey;
+    int currentKey, previousKey, currentKeyROT, previousKeyROT, previous_X, previous_Y;
 
     // BLUETOOTH VARS
     private static final int REQUEST_ENABLE_BT = 1;
@@ -66,8 +59,17 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
     private BluetoothSocket mBluetoothSocket = null;
     private DataOutputStream mOutStream = null;
     private DataInputStream mInStream = null;
-    ControlBTHRunnable controlBTH;
+
+//    ControlBTHRunnable controlBTH;
     RosieBTHTask videoBTH;
+
+    CardboardRenderer CR;
+
+    Handler controlHandle;
+    Runnable ctl;
+    int current_X;
+    int current_Y;
+
 
     // IP VARS
     ControlIPRunnable controlIP;
@@ -76,20 +78,15 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
     DataOutputStream out;
 
     // Sensor vars.
-    private SensorManager senManager;
-    private Sensor accel;
-    private Sensor mag;
-    float[] mGravity;
-    float[] mGeomagnetic;
     DecimalFormat dFormat;
+    float orientationD[];
 
 
 
-    //TODO: START OF CARD?BOARD VARS
+
 
     CardboardView cardboardView;
 
-    //TODO: END OF CARDBOARD VARS
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -128,36 +125,30 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        AsyncServiceHelper.initOpenCV(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
 
-        cardboardView = (CardboardView) findViewById(R.id.cardboard_view);
-        cardboardView.setRenderer(new CardboardRenderer(this));
-        setCardboardView(cardboardView);
+        orientationD = new float[3];
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         CheckBTState();
 
-//        senManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-//        accel = senManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-//        mag = senManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-//
-//        dFormat = new DecimalFormat("0.00");
-//
-//        bm = BitmapFactory.decodeResource(getResources(), R.drawable.ossim);
-
+        dFormat = new DecimalFormat("0");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-//        cardboardView.onResume();
-        AsyncServiceHelper.initOpenCV(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
-
-//        senManager.registerListener(this, accel, SensorManager.SENSOR_DELAY_NORMAL);
-//        senManager.registerListener(this, mag, SensorManager.SENSOR_DELAY_NORMAL);
-
     }
 
     public void startView() {
+
+        setCardboardView(cardboardView);
+        cardboardView = (CardboardView) findViewById(R.id.cardboard_view);
+
+        CR = new CardboardRenderer(this);
+        cardboardView.setRenderer(CR);
+
+        cardboardView.onResume();
 
 
 //        imView = (ImageView) findViewById(R.id.imView);
@@ -166,11 +157,9 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
         tmp = new Mat();
         imgSize = img.total() * img.elemSize();
 
-
         bm = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
 
-
-        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(Constants.SERVER_ADDRESS_BLUETOOTH);
+        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(Constants.SERVER_ADDRESS_BLUETOOTH  );
         try {
             mBluetoothSocket = device.createRfcommSocketToServiceRecord(Constants.DEVICE_UUID);
         } catch (IOException e) {
@@ -196,6 +185,10 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
 
         currentKey = 0;
         previousKey = 1;
+        currentKeyROT = 0;
+        previousKeyROT = 1;
+        previous_X = -1;
+        previous_Y = -1;
 
 
         // IP IMPLEMENTATION
@@ -210,19 +203,41 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
         videoBTH = new RosieBTHTask();
         videoBTH.execute();
 
-        controlBTH = new ControlBTHRunnable();
-        Thread controlThreadBTH = new Thread(controlBTH);
-        controlThreadBTH.start();
+        controlHandle = new Handler();
+        controlHandle.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (mBluetoothSocket.isConnected() && currentKey != KeyEvent.KEYCODE_ESCAPE) {
 
+//                        Log.i(TAG, "X: " + dFormat.format(orientationD[0]) + ", Y: " + dFormat.format(orientationD[1]) + ", Z: " + dFormat.format(orientationD[2]));
+                        CR.getOrientation(orientationD);
+
+                        current_X = Integer.parseInt(dFormat.format(orientationD[1]));
+                        current_Y = Integer.parseInt(dFormat.format(orientationD[0]));
+
+//                        Log.i(TAG, "X: " + current_X + " Y: " + current_Y);
+
+                        mOutStream.writeInt(currentKey);
+                        mOutStream.writeInt(currentKeyROT);
+                        mOutStream.writeInt(current_X);
+                        mOutStream.writeInt(current_Y);
+                        mOutStream.flush();
+
+                        controlHandle.postDelayed(this, 75);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+            }
+        }, 1000);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         cardboardView.onPause();
-//        senManager.unregisterListener(this);
-
-
 
         if (mOutStream != null) {
             try {
@@ -237,53 +252,6 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
         } catch (IOException e2) {
             AlertBox("Fatal Error", "In onPause() and failed to close socket." + e2.getMessage() + ".");
         }
-    }
-
-
-    //TODO: POINTER FOR START OF TEMPORARY CARDBOARD VIEWER
-
-
-
-    //TODO: END OF TEMPORARY POINTER
-
-
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        float R[] = new float[9];
-        float I[] = new float[9];
-        float orientation[] = new float[3];
-        float orientationD[] = new float[3];
-        boolean success;
-
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
-            mGravity = applyLowPassFilter(event.values.clone(), mGravity);
-        if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)
-            mGeomagnetic = applyLowPassFilter(event.values.clone(), mGeomagnetic);
-        if (mGravity != null && mGeomagnetic != null) {
-            success = SensorManager.getRotationMatrix(R, I, mGravity, mGeomagnetic);
-            if (success) {
-                SensorManager.getOrientation(R, orientation);
-                orientationD[0] = (float) Math.toDegrees(orientation[0]);
-                orientationD[1] = (float) Math.toDegrees(orientation[1]);
-                orientationD[2] = (float) Math.toDegrees(orientation[2]);
-                Log.i(TAG, "X: " + dFormat.format(orientationD[1]) + ", Y: " + dFormat.format(orientationD[2]) + ", Z: " + dFormat.format(orientationD[0]));
-            }
-        }
-
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-    }
-
-    private float[] applyLowPassFilter(float[] input, float[] output) {
-        if (output == null) return input;
-
-        for ( int i = 0; i < input.length; i++ ) {
-            output[i] = output[i] + ALPHA * (input[i] - output[i]);
-        }
-        return output;
     }
 
     public class ControlIPRunnable implements Runnable {
@@ -314,29 +282,6 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
-    }
-
-    public class ControlBTHRunnable implements Runnable {
-        @Override
-        public void run() {
-
-            Looper.prepare();
-            Handler controlHandle = new Handler();
-
-            try {
-                while (mBluetoothSocket.isConnected() && currentKey != KeyEvent.KEYCODE_ESCAPE) {
-                    if (currentKey != previousKey) {
-                        mOutStream.writeInt(currentKey);
-                        mOutStream.flush();
-                    }
-                    previousKey = currentKey;
-                    controlHandle.postDelayed(controlBTH, 100);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
         }
     }
 
@@ -388,7 +333,7 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
 
         @Override
         protected void onProgressUpdate(Bitmap ... item) {
-            imView.setImageBitmap(item[0]);
+//            imView.setImageBitmap(item[0]);
 //            TextureHelper.setBitmap(item[0]);
         }
 
@@ -408,14 +353,6 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
                     for (int i = 0; i < size; i+= bytes) {
                         bytes = mInStream.read(data, i, size - i);
                     }
-
-//                    if (currentKey != previousKey) {
-//                        mOutStream.writeInt(currentKey);
-//                        mOutStream.flush();
-//                    }
-//                    previousKey = currentKey;
-
-                    Log.i(TAG, "SIZE: " + size);
 
                     tmp = new Mat(1, size, CvType.CV_8UC1);
                     tmp.put(0, 0, data);
@@ -469,6 +406,14 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
                 Log.i(TAG, "ESCAPE");
                 currentKey = keyCode;
                 return true;
+            case KeyEvent.KEYCODE_L:
+                Log.i(TAG, "L DOWN");
+                currentKeyROT = keyCode;
+                return true;
+            case KeyEvent.KEYCODE_J:
+                Log.i(TAG, "J DOWN");
+                currentKeyROT = keyCode;
+                return true;
             default:
                 return super.onKeyDown(keyCode, event);
         }
@@ -498,6 +443,15 @@ public class MainActivity extends CardboardActivity implements SensorEventListen
                 Log.i(TAG, "ESCAPE");
                 currentKey = 0;
                 return true;
+            case KeyEvent.KEYCODE_L:
+                Log.i(TAG, "L UP");
+                currentKeyROT = 0;
+                return true;
+            case KeyEvent.KEYCODE_J:
+                Log.i(TAG, "J UP");
+                currentKeyROT = 0;
+                return true;
+
             default:
                 return super.onKeyUp(keyCode, event);
         }

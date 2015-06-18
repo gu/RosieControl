@@ -60,9 +60,6 @@ public class TextureHelper {
 
             // Load the bitmap into the bound texture.
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
-
-            // Recycle the bitmap, since its data has been loaded into OpenGL.
-//            bitmap.recycle();
         }
 
         if (textureHandle[0] == 0)
@@ -71,10 +68,6 @@ public class TextureHelper {
         }
 
         return textureHandle[0];
-    }
-
-    public static void setBitmap(Bitmap bmp) {
-        frame = Bitmap.createBitmap(bmp);
     }
 
     public static void setMat(Mat mat) {
@@ -91,9 +84,6 @@ public class TextureHelper {
 
             GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
             GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
-
-//            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.WrAP)
-
 
             img.get(0, 0, bytes);
 

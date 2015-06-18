@@ -3,6 +3,7 @@ package gumanchu.rosiecontrol.CardboardUtilities;
 import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
+import android.util.Log;
 
 import com.google.vrtoolkit.cardboard.CardboardView;
 import com.google.vrtoolkit.cardboard.Eye;
@@ -52,6 +53,9 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
     private int mProgramHandle;
     int mPointProgramHandle;
     private int mTextureDataHandle;
+
+    float[] orientation;
+    float[] orientationDeg;
 
     public static boolean streaming = false;
 
@@ -111,6 +115,9 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
             mCubeTextureCoordinates = ByteBuffer.allocateDirect(cubeTextureCoordinateData.length * mBytesPerFloat)
                     .order(ByteOrder.nativeOrder()).asFloatBuffer();
             mCubeTextureCoordinates.put(cubeTextureCoordinateData).position(0);
+
+        orientation = new float[3];
+        orientationDeg = new float[3];
     }
 
     protected String getVertexShader()
@@ -194,26 +201,21 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
 
     @Override
     public void onNewFrame(HeadTransform headTransform) {
+        headTransform.getEulerAngles(orientation, 0);
 
+        orientationDeg[0] = (float) Math.toDegrees(orientation[0]) + 90;
+        orientationDeg[1] = (float) Math.toDegrees(orientation[1]);
+        orientationDeg[2] = (float) Math.toDegrees(orientation[2]);
     }
 
     @Override
     public void onDrawEye(Eye eye) {
-
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
-
-//        mTextureDataHandle = TextureHelper.loadTexture(mActivityContext, R.drawable.sad_danbo);
-
         mTextureDataHandle = TextureHelper.loadMatTexture();
-        // Do a complete rotation every 10 seconds.
-//        long time = SystemClock.uptimeMillis() % 10000L;
-//        float angleInDegrees = (360.0f / 10000.0f) * ((int) time);
 
-        // Set our per-vertex lighting program.
         GLES20.glUseProgram(mProgramHandle);
 
-        // Set program handles for cube drawing.
         mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgramHandle, "u_MVPMatrix");
         mMVMatrixHandle = GLES20.glGetUniformLocation(mProgramHandle, "u_MVMatrix");
         mLightPosHandle = GLES20.glGetUniformLocation(mProgramHandle, "u_LightPos");
@@ -223,71 +225,53 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
         mNormalHandle = GLES20.glGetAttribLocation(mProgramHandle, "a_Normal");
         mTextureCoordinateHandle = GLES20.glGetAttribLocation(mProgramHandle, "a_TexCoordinate");
 
-        // Set the active texture unit to texture unit 0.
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
 
-
-        // Bind the texture to this unit.
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureDataHandle);
 
-        // Tell the texture uniform sampler to use this texture in the shader by binding to texture unit 0.
         GLES20.glUniform1i(mTextureUniformHandle, 0);
 
         Matrix.setIdentityM(mModelMatrix, 0);
         Matrix.translateM(mModelMatrix, 0, 0.0f, 0.0f, -5.0f);
         drawCube();
+
         int[] textures = {mTextureDataHandle};
         GLES20.glDeleteTextures(1, textures, 0);
     }
 
-    private void drawCube()
-    {
-        // Pass in the position information
+    private void drawCube() {
         mCubePositions.position(0);
+
         GLES20.glVertexAttribPointer(mPositionHandle, mPositionDataSize, GLES20.GL_FLOAT, false,
                 0, mCubePositions);
 
         GLES20.glEnableVertexAttribArray(mPositionHandle);
 
-        // Pass in the color information
         mCubeColors.position(0);
+
         GLES20.glVertexAttribPointer(mColorHandle, mColorDataSize, GLES20.GL_FLOAT, false,
                 0, mCubeColors);
-
         GLES20.glEnableVertexAttribArray(mColorHandle);
 
-        // Pass in the normal information
         mCubeNormals.position(0);
         GLES20.glVertexAttribPointer(mNormalHandle, mNormalDataSize, GLES20.GL_FLOAT, false,
                 0, mCubeNormals);
-
         GLES20.glEnableVertexAttribArray(mNormalHandle);
 
-        // Pass in the texture coordinate information
         mCubeTextureCoordinates.position(0);
         GLES20.glVertexAttribPointer(mTextureCoordinateHandle, mTextureCoordinateDataSize, GLES20.GL_FLOAT, false,
                 0, mCubeTextureCoordinates);
-
         GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
 
-        // This multiplies the view matrix by the model matrix, and stores the result in the MVP matrix
-        // (which currently contains model * view).
         Matrix.multiplyMM(mMVPMatrix, 0, mViewMatrix, 0, mModelMatrix, 0);
-
-        // Pass in the modelview matrix.
         GLES20.glUniformMatrix4fv(mMVMatrixHandle, 1, false, mMVPMatrix, 0);
-
-        // This multiplies the modelview matrix by the projection matrix, and stores the result in the MVP matrix
-        // (which now contains model * view * projection).
         Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mMVPMatrix, 0);
-
-        // Pass in the combined matrix.
         GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
-
-        // Pass in the light position in eye space.
         GLES20.glUniform3f(mLightPosHandle, mLightPosInEyeSpace[0], mLightPosInEyeSpace[1], mLightPosInEyeSpace[2]);
-
-        // Draw the cube.
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 36);
+    }
+
+    public void getOrientation(float[] dst) {
+        System.arraycopy(orientationDeg, 0, dst, 0, orientationDeg.length);
     }
 }
