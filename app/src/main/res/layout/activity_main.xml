@@ -5,16 +5,117 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     android:paddingBottom="@dimen/activity_vertical_margin" tools:context=".MainActivity">
 
-    <!--<ImageView-->
-        <!--android:layout_width="fill_parent"-->
-        <!--android:layout_height="fill_parent"-->
-        <!--android:id="@+id/imView"/>-->
 
-    <com.google.vrtoolkit.cardboard.CardboardView
-        android:id="@+id/cardboard_view"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/etInetAddress"
+        android:layout_marginTop="50dp"
+        android:hint="@string/ip_intro"
         android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true" />
+        android:layout_centerHorizontal="true" />
+
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/bt_rosie"
+        android:id="@+id/button"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:onClick="onButtonRosieClick"/>
+
+    <RadioGroup
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/etInetAddress"
+        android:layout_alignLeft="@id/etInetAddress"
+        android:layout_alignStart="@id/etInetAddress"
+        android:id="@+id/rgView"
+        android:layout_marginTop="25dp">
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/view_default"
+            android:id="@+id/rbView1"
+            android:checked="true"
+            android:onClick="onRadioViewClick"/>
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/view_cardboard"
+            android:id="@+id/rbView2"
+            android:checked="false"
+            android:onClick="onRadioViewClick"/>
+    </RadioGroup>
+
+    <RadioGroup
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/rgView"
+        android:layout_alignLeft="@id/etInetAddress"
+        android:layout_alignStart="@id/etInetAddress"
+        android:id="@+id/rgConn">
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/conn_wifi"
+            android:id="@+id/rbConn1"
+            android:checked="true"
+            android:layout_marginTop="25dp"
+            android:onClick="onRadioConnClick"/>
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/conn_bth"
+            android:id="@+id/rbConn2"
+            android:checked="false"
+            android:onClick="onRadioConnClick" />
+    </RadioGroup>
+
+    <RadioGroup
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/rgConn"
+        android:layout_alignLeft="@id/etInetAddress"
+        android:layout_alignStart="@id/etInetAddress"
+        android:layout_marginTop="25dp"
+        android:id="@+id/radioGroup">
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/ctl_both"
+            android:id="@+id/rbCtl3"
+            android:checked="true"
+            android:onClick="onRadioCtlClick"/>
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/ctl_vid"
+            android:id="@+id/rbCtl1"
+            android:checked="false"
+            android:onClick="onRadioCtlClick"/>
+
+        <RadioButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/ctl_ctl"
+            android:id="@+id/rbCtl2"
+            android:checked="false"
+            android:onClick="onRadioCtlClick" />
+    </RadioGroup>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView"
+        android:layout_above="@+id/button"
+        android:layout_centerHorizontal="true" />
 
 </RelativeLayout>

@@ -3,4 +3,14 @@
 
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="view_default">Default View</string>
+    <string name="view_cardboard">Cardboard View</string>
+    <string name="conn_wifi">WiFi Connection</string>
+    <string name="conn_bth">Bluetooth Connection</string>
+    <string name="ctl_both">Both</string>
+    <string name="ctl_vid">Video</string>
+    <string name="ctl_ctl">Control</string>
+
+    <string name="ip_intro">Please print Rosie\'s IP address</string>
+    <string name="bt_rosie">Start Rosie</string>
 </resources>
