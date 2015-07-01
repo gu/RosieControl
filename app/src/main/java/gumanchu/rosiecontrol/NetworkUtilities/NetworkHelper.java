@@ -13,6 +13,8 @@ public abstract class NetworkHelper {
     public abstract void connect();
     public abstract void disconnect();
 
+    public boolean connected = false;
+
     public DataInputStream getInputStream() {
         if (inputStream != null) {
             return inputStream;
@@ -35,5 +37,9 @@ public abstract class NetworkHelper {
 
     public void setOutputStream(DataOutputStream out) {
         outputStream = out;
+    }
+
+    public boolean isConnected() {
+        return connected;
     }
 }

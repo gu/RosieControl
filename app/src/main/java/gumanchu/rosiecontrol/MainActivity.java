@@ -4,13 +4,19 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.RadioButton;
+import android.widget.TextView;
 
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 
+import java.util.concurrent.CountDownLatch;
+
+import gumanchu.rosiecontrol.CardboardUtilities.TextureHelper;
+import gumanchu.rosiecontrol.NetworkUtilities.BluetoothHelper;
 import gumanchu.rosiecontrol.NetworkUtilities.InetHelper;
 import gumanchu.rosiecontrol.NetworkUtilities.NetworkHelper;
 
@@ -22,8 +28,23 @@ public class MainActivity extends Activity {
     private int controlMethod = Constants.CONTROL_TYPE_BOTH;
     private int connectionType = Constants.CONNECTION_TYPE_INET;
     private int rosieView = Constants.DEFAULT_VIEW;
-
     private String rosieIP = Constants.SERVER_IP;
+
+
+    NetworkHelper nHelper;
+
+
+    /*
+     * UI Elements
+     */
+    TextView tvStatus;
+    RadioButton bt1;
+    RadioButton bt2;
+    RadioButton bt3;
+    RadioButton bt4;
+    RadioButton bt5;
+    RadioButton bt6;
+    RadioButton bt7;
 
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
@@ -32,7 +53,7 @@ public class MainActivity extends Activity {
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS:
                     Log.i(TAG, "OpenCV Manager Connected");
-                    startView();
+                    enableRadio();
                     break;
                 case LoaderCallbackInterface.INIT_FAILED:
                     Log.i(TAG,"Init Failed");
@@ -63,7 +84,19 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        tvStatus = (TextView) findViewById(R.id.tvStatus);
+
+        bt1 = (RadioButton) findViewById(R.id.rbConn1);
+        bt2 = (RadioButton) findViewById(R.id.rbConn2);
+        bt3 = (RadioButton) findViewById(R.id.rbCtl1);
+        bt4 = (RadioButton) findViewById(R.id.rbCtl2);
+        bt5 = (RadioButton) findViewById(R.id.rbCtl3);
+        bt6 = (RadioButton) findViewById(R.id.rbView1);
+        bt7 = (RadioButton) findViewById(R.id.rbView2);
+
+        tvStatus.setText("Initializing OpenCV...");
         AsyncServiceHelper.initOpenCV(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
+
     }
 
     @Override
@@ -71,8 +104,15 @@ public class MainActivity extends Activity {
         super.onResume();
     }
 
-    public void startView() {
-
+    public void enableRadio() {
+        tvStatus.setText("OpenCV Loaded.  Please select parameters.");
+        bt1.setEnabled(true);
+        bt2.setEnabled(true);
+        bt3.setEnabled(true);
+        bt4.setEnabled(true);
+        bt5.setEnabled(true);
+        bt6.setEnabled(true);
+        bt7.setEnabled(true);
     }
 
     @Override
@@ -81,6 +121,31 @@ public class MainActivity extends Activity {
     }
 
     public void onButtonRosieClick(View view) {
+
+        tvStatus.setText("Preparing Connection");
+
+
+        switch (connectionType) {
+            case Constants.CONNECTION_TYPE_INET:
+
+                nHelper = new InetHelper();
+                nHelper.connect();
+
+                if (nHelper.isConnected()) {
+                    tvStatus.setText("Connected to Rosie via Wifi");
+                } else {
+                    tvStatus.setText("Failed to connect to Rosie via Wifi");
+                }
+
+                break;
+            case Constants.CONNECTION_TYPE_BTH:
+
+                nHelper = new BluetoothHelper();
+                nHelper.connect();
+
+                break;
+        }
+
 
     }
 

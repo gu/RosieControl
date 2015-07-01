@@ -40,7 +40,8 @@
             android:text="@string/view_default"
             android:id="@+id/rbView1"
             android:checked="true"
-            android:onClick="onRadioViewClick"/>
+            android:onClick="onRadioViewClick"
+            android:enabled="false"/>
 
         <RadioButton
             android:layout_width="wrap_content"
@@ -48,7 +49,8 @@
             android:text="@string/view_cardboard"
             android:id="@+id/rbView2"
             android:checked="false"
-            android:onClick="onRadioViewClick"/>
+            android:onClick="onRadioViewClick"
+            android:enabled="false"/>
     </RadioGroup>
 
     <RadioGroup
@@ -66,7 +68,8 @@
             android:id="@+id/rbConn1"
             android:checked="true"
             android:layout_marginTop="25dp"
-            android:onClick="onRadioConnClick"/>
+            android:onClick="onRadioConnClick"
+            android:enabled="false"/>
 
         <RadioButton
             android:layout_width="wrap_content"
@@ -74,7 +77,8 @@
             android:text="@string/conn_bth"
             android:id="@+id/rbConn2"
             android:checked="false"
-            android:onClick="onRadioConnClick" />
+            android:onClick="onRadioConnClick"
+            android:enabled="false" />
     </RadioGroup>
 
     <RadioGroup
@@ -92,7 +96,8 @@
             android:text="@string/ctl_both"
             android:id="@+id/rbCtl3"
             android:checked="true"
-            android:onClick="onRadioCtlClick"/>
+            android:onClick="onRadioCtlClick"
+            android:enabled="false"/>
 
         <RadioButton
             android:layout_width="wrap_content"
@@ -100,7 +105,8 @@
             android:text="@string/ctl_vid"
             android:id="@+id/rbCtl1"
             android:checked="false"
-            android:onClick="onRadioCtlClick"/>
+            android:onClick="onRadioCtlClick"
+            android:enabled="false"/>
 
         <RadioButton
             android:layout_width="wrap_content"
@@ -108,13 +114,14 @@
             android:text="@string/ctl_ctl"
             android:id="@+id/rbCtl2"
             android:checked="false"
-            android:onClick="onRadioCtlClick" />
+            android:onClick="onRadioCtlClick"
+            android:enabled="false"/>
     </RadioGroup>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/textView"
+        android:id="@+id/tvStatus"
         android:layout_above="@+id/button"
         android:layout_centerHorizontal="true" />
 

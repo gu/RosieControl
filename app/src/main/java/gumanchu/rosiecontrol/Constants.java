@@ -23,6 +23,5 @@ public interface Constants {
     UUID DEVICE_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     String SERVER_IP = "192.168.1.26";
-    int VIDEO_PORT = 1234;
-    int CONTROL_PORT = 1235;
+    int SERVER_PORT = 1234;
 }
