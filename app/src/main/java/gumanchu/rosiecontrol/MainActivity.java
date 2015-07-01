@@ -1,7 +1,9 @@
 package gumanchu.rosiecontrol;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -13,15 +15,14 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 
-import java.util.concurrent.CountDownLatch;
+import java.io.Serializable;
 
-import gumanchu.rosiecontrol.CardboardUtilities.TextureHelper;
 import gumanchu.rosiecontrol.NetworkUtilities.BluetoothHelper;
 import gumanchu.rosiecontrol.NetworkUtilities.InetHelper;
 import gumanchu.rosiecontrol.NetworkUtilities.NetworkHelper;
 
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements Serializable {
 
     private static final String TAG = "RosieControl";
 
@@ -32,6 +33,8 @@ public class MainActivity extends Activity {
 
 
     NetworkHelper nHelper;
+    Handler handler;
+    Intent intent;
 
 
     /*
@@ -84,6 +87,8 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        handler = new Handler();
+
         tvStatus = (TextView) findViewById(R.id.tvStatus);
 
         bt1 = (RadioButton) findViewById(R.id.rbConn1);
@@ -129,23 +134,37 @@ public class MainActivity extends Activity {
             case Constants.CONNECTION_TYPE_INET:
 
                 nHelper = new InetHelper();
-                nHelper.connect();
+                nHelper.connect(this);
 
-                if (nHelper.isConnected()) {
-                    tvStatus.setText("Connected to Rosie via Wifi");
-                } else {
-                    tvStatus.setText("Failed to connect to Rosie via Wifi");
-                }
+                handler.postDelayed(new Runnable() {
+                    public void run() {
+                        initView();
+                    }
+                }, 5000);
 
                 break;
             case Constants.CONNECTION_TYPE_BTH:
 
-                nHelper = new BluetoothHelper();
-                nHelper.connect();
+//                nHelper = new BluetoothHelper(this);
+//                nHelper.connect();
 
                 break;
         }
+    }
 
+    public void initView() {
+
+
+        if (nHelper.isConnected()) {
+            tvStatus.setText("Connected to Rosie via Wifi");
+        } else {
+            tvStatus.setText("Failed to connect to Rosie via Wifi");
+        }
+
+        if (nHelper.isConnected()) {
+            //TODO: use serielizable to pass netwokr helper.
+            intent.putExtra("")
+        }
 
     }
 
@@ -211,6 +230,4 @@ public class MainActivity extends Activity {
                 break;
         }
     }
-
-
 }

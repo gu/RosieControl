@@ -1,45 +1,30 @@
 package gumanchu.rosiecontrol.NetworkUtilities;
 
+import android.content.Context;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Abstract Class with general network stuff;
  */
-public abstract class NetworkHelper {
-    public DataInputStream inputStream;
-    public DataOutputStream outputStream;
+public interface NetworkHelper {
 
-    public abstract void connect();
-    public abstract void disconnect();
+    void connect(Context context);
+    void disconnect();
+    void read();
+    void write();
 
-    public boolean connected = false;
 
-    public DataInputStream getInputStream() {
-        if (inputStream != null) {
-            return inputStream;
-        } else {
-            return null;
-        }
-    }
+//    void setInputStream(DataInputStream in);
+//
+//    DataInputStream getInputStream();
+//
+//    void setOutputStream(DataOutputStream out);
+//
+//    DataOutputStream getOutputStream();
 
-    public DataOutputStream getOutputStream() {
-        if (outputStream != null) {
-            return outputStream;
-        } else {
-            return null;
-        }
-    }
+    boolean isConnected();
 
-    public void setInputStream(DataInputStream in) {
-        inputStream = in;
-    }
-
-    public void setOutputStream(DataOutputStream out) {
-        outputStream = out;
-    }
-
-    public boolean isConnected() {
-        return connected;
-    }
 }
