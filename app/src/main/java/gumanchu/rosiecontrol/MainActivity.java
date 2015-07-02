@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -15,14 +17,12 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 
-import java.io.Serializable;
-
 import gumanchu.rosiecontrol.NetworkUtilities.BluetoothHelper;
 import gumanchu.rosiecontrol.NetworkUtilities.InetHelper;
 import gumanchu.rosiecontrol.NetworkUtilities.NetworkHelper;
 
 
-public class MainActivity extends Activity implements Serializable {
+public class MainActivity extends Activity implements Parcelable {
 
     private static final String TAG = "RosieControl";
 
@@ -163,6 +163,7 @@ public class MainActivity extends Activity implements Serializable {
 
         if (nHelper.isConnected()) {
             //TODO: use serielizable to pass netwokr helper.
+            intent = new Intent();
             intent.putExtra("")
         }
 
@@ -229,5 +230,13 @@ public class MainActivity extends Activity implements Serializable {
                 }
                 break;
         }
+    }
+
+    public int describeContents() {
+        return 0;
+    }
+
+    public void writeToParcel(Parcel out, int flags) {
+
     }
 }
