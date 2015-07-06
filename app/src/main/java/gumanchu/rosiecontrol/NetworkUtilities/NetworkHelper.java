@@ -1,10 +1,10 @@
 package gumanchu.rosiecontrol.NetworkUtilities;
 
 import android.content.Context;
+import android.os.Parcelable;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * Abstract Class with general network stuff;
@@ -26,5 +26,7 @@ public interface NetworkHelper {
 //    DataOutputStream getOutputStream();
 
     boolean isConnected();
+
+//    void setControls();
 
 }

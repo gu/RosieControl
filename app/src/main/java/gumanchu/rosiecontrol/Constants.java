@@ -22,6 +22,6 @@ public interface Constants {
 
     UUID DEVICE_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
-    String SERVER_IP = "192.168.1.26";
+    String SERVER_IP = "192.168.0.115";
     int SERVER_PORT = 1234;
 }

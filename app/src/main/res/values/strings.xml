@@ -13,4 +13,5 @@
 
     <string name="ip_intro">Please print Rosie\'s IP address</string>
     <string name="bt_rosie">Start Rosie</string>
+    <string name="iv_desc">Default Rosie View</string>
 </resources>

@@ -1,28 +1,38 @@
 package gumanchu.rosiecontrol;
 
-import android.app.Activity;
-import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Parcel;
-import android.os.Parcelable;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.TextView;
+import android.widget.ViewFlipper;
 
+
+import com.google.vrtoolkit.cardboard.CardboardActivity;
+import com.google.vrtoolkit.cardboard.CardboardView;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
 
+import java.io.IOException;
+
+import gumanchu.rosiecontrol.CardboardUtilities.CardboardRenderer;
+import gumanchu.rosiecontrol.CardboardUtilities.TextureHelper;
 import gumanchu.rosiecontrol.NetworkUtilities.BluetoothHelper;
 import gumanchu.rosiecontrol.NetworkUtilities.InetHelper;
 import gumanchu.rosiecontrol.NetworkUtilities.NetworkHelper;
 
 
-public class MainActivity extends Activity implements Parcelable {
+public class MainActivity extends CardboardActivity {
 
     private static final String TAG = "RosieControl";
 
@@ -31,15 +41,25 @@ public class MainActivity extends Activity implements Parcelable {
     private int rosieView = Constants.DEFAULT_VIEW;
     private String rosieIP = Constants.SERVER_IP;
 
+    Controller controller;
 
     NetworkHelper nHelper;
     Handler handler;
-    Intent intent;
 
+    Mat defaultFrame;
+    Bitmap defaultBmp;
 
     /*
      * UI Elements
      */
+    private ViewFlipper viewFlipper;
+
+    CardboardRenderer cardboardRenderer;
+    CardboardView cardboardView;
+
+    ImageView imageView;
+
+
     TextView tvStatus;
     RadioButton bt1;
     RadioButton bt2;
@@ -57,23 +77,6 @@ public class MainActivity extends Activity implements Parcelable {
                 case LoaderCallbackInterface.SUCCESS:
                     Log.i(TAG, "OpenCV Manager Connected");
                     enableRadio();
-                    break;
-                case LoaderCallbackInterface.INIT_FAILED:
-                    Log.i(TAG,"Init Failed");
-                    break;
-                case LoaderCallbackInterface.INSTALL_CANCELED:
-                    Log.i(TAG,"Install Cancelled");
-                    break;
-                case LoaderCallbackInterface.INCOMPATIBLE_MANAGER_VERSION:
-                    Log.i(TAG,"Incompatible Version");
-                    break;
-                case LoaderCallbackInterface.MARKET_ERROR:
-                    Log.i(TAG,"Market Error");
-                    break;
-                default:
-                    Log.i(TAG, "OpenCV Manager Install");
-                    super.onManagerConnected(status);
-                    break;
             }
         }
     };
@@ -83,11 +86,17 @@ public class MainActivity extends Activity implements Parcelable {
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        viewFlipper = (ViewFlipper) findViewById(R.id.viewFlipper);
+        viewFlipper.setDisplayedChild(1);
+
         handler = new Handler();
+
+        controller = new Controller();
 
         tvStatus = (TextView) findViewById(R.id.tvStatus);
 
@@ -99,6 +108,8 @@ public class MainActivity extends Activity implements Parcelable {
         bt6 = (RadioButton) findViewById(R.id.rbView1);
         bt7 = (RadioButton) findViewById(R.id.rbView2);
 
+        imageView = (ImageView) findViewById(R.id.ivDefaultView);
+
         tvStatus.setText("Initializing OpenCV...");
         AsyncServiceHelper.initOpenCV(OpenCVLoader.OPENCV_VERSION_2_4_11, this, mLoaderCallback);
 
@@ -107,6 +118,9 @@ public class MainActivity extends Activity implements Parcelable {
     @Override
     protected void onResume() {
         super.onResume();
+        if (cardboardView !=  null) {
+            cardboardView.onResume();
+        }
     }
 
     public void enableRadio() {
@@ -123,11 +137,15 @@ public class MainActivity extends Activity implements Parcelable {
     @Override
     protected void onPause() {
         super.onPause();
+        if (cardboardView != null) {
+            cardboardView.onPause();
+        }
     }
 
     public void onButtonRosieClick(View view) {
 
         tvStatus.setText("Preparing Connection");
+        Log.i(TAG, "In button click");
 
 
         switch (connectionType) {
@@ -138,6 +156,7 @@ public class MainActivity extends Activity implements Parcelable {
 
                 handler.postDelayed(new Runnable() {
                     public void run() {
+                        Log.i(TAG, "In handler run");
                         initView();
                     }
                 }, 5000);
@@ -154,19 +173,57 @@ public class MainActivity extends Activity implements Parcelable {
 
     public void initView() {
 
-
         if (nHelper.isConnected()) {
             tvStatus.setText("Connected to Rosie via Wifi");
         } else {
             tvStatus.setText("Failed to connect to Rosie via Wifi");
         }
 
-        if (nHelper.isConnected()) {
-            //TODO: use serielizable to pass netwokr helper.
-            intent = new Intent();
-            intent.putExtra("")
+        Mat img = new Mat(480, 640, CvType.CV_8UC3);
+
+        try {
+            img = Utils.loadResource(this, R.drawable.sad_danbo);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
+        switch(rosieView) {
+            case Constants.DEFAULT_VIEW:
+
+                viewFlipper.setInAnimation(this, R.anim.slide_in_from_right);
+                viewFlipper.setOutAnimation(this, R.anim.slide_out_to_left);
+                viewFlipper.showPrevious();
+
+                imageView.setImageResource(R.drawable.sad_danbo);
+
+
+
+                defaultFrame = new Mat(480, 640, CvType.CV_8UC3);
+                defaultBmp = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
+
+                while (nHelper.isConnected()) {
+                    TextureHelper.getMat(defaultFrame);
+                    Utils.matToBitmap(defaultFrame, defaultBmp);
+                    imageView.setImageBitmap(defaultBmp);
+                }
+
+                break;
+            case Constants.CARDBOARD_VIEW:
+
+                cardboardView = (CardboardView) findViewById(R.id.cardboard_view);
+                setCardboardView(cardboardView);
+
+                cardboardRenderer = new CardboardRenderer(this);
+                cardboardView.setRenderer(cardboardRenderer);
+                cardboardView.onResume();
+
+                viewFlipper.setInAnimation(this, R.anim.slide_in_from_left);
+                viewFlipper.setOutAnimation(this, R.anim.slide_out_to_right);
+                viewFlipper.showNext();
+
+                TextureHelper.setMat(img);
+                break;
+        }
     }
 
     public void onRadioViewClick(View view) {
@@ -232,11 +289,15 @@ public class MainActivity extends Activity implements Parcelable {
         }
     }
 
-    public int describeContents() {
-        return 0;
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        controller.setKey(keyCode);
+        return super.onKeyDown(keyCode, event);
     }
 
-    public void writeToParcel(Parcel out, int flags) {
-
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        controller.setKey(0);
+        return super.onKeyDown(keyCode, event);
     }
 }

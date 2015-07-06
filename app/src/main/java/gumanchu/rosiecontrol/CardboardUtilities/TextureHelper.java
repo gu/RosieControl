@@ -74,6 +74,10 @@ public class TextureHelper {
         mat.copyTo(img);
     }
 
+    public static void getMat(Mat dst) {
+        img.copyTo(dst);
+    }
+
     public static int loadMatTexture() {
         final int[] textureHandle = new int[1];
 

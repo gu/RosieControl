@@ -16,6 +16,7 @@ import java.nio.FloatBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
 
+import gumanchu.rosiecontrol.Controller;
 import gumanchu.rosiecontrol.R;
 
 /**
@@ -55,7 +56,7 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
     private int mTextureDataHandle;
 
     float[] orientation;
-    float[] orientationDeg;
+    public static float[] orientationDeg;
 
     public static boolean streaming = false;
 
@@ -206,6 +207,9 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
         orientationDeg[0] = (float) Math.toDegrees(orientation[0]) + 90;
         orientationDeg[1] = (float) Math.toDegrees(orientation[1]);
         orientationDeg[2] = (float) Math.toDegrees(orientation[2]);
+
+        Controller.setOrientation((int) orientationDeg[1], (int) orientationDeg[0]);
+
     }
 
     @Override
@@ -269,9 +273,5 @@ public class CardboardRenderer implements CardboardView.StereoRenderer {
         GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
         GLES20.glUniform3f(mLightPosHandle, mLightPosInEyeSpace[0], mLightPosInEyeSpace[1], mLightPosInEyeSpace[2]);
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 36);
-    }
-
-    public void getOrientation(float[] dst) {
-        System.arraycopy(orientationDeg, 0, dst, 0, orientationDeg.length);
     }
 }
