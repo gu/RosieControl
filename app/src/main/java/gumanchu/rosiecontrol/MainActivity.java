@@ -39,7 +39,7 @@ public class MainActivity extends CardboardActivity {
 
     private int controlMethod = Constants.CONTROL_TYPE_BOTH;
     private int connectionType = Constants.CONNECTION_TYPE_INET;
-    private static int rosieView = Constants.DEFAULT_VIEW;
+    public static int rosieView = Constants.DEFAULT_VIEW;
     private String rosieIP = Constants.SERVER_IP;
 
     Controller controller;
@@ -171,8 +171,8 @@ public class MainActivity extends CardboardActivity {
                 break;
             case Constants.CONNECTION_TYPE_BTH:
 
-//                nHelper = new BluetoothHelper(this);
-//                nHelper.connect();
+                nHelper = new BluetoothHelper();
+                nHelper.connect(this);
 
                 break;
         }
@@ -208,13 +208,6 @@ public class MainActivity extends CardboardActivity {
 
                 Log.i(TAG, "status: " + nHelper.isConnected());
 
-//                while (nHelper.isConnected()) {
-////                    Log.i(TAG, "doing stuff");
-//                    TextureHelper.getMat(defaultFrame);
-//                    Utils.matToBitmap(defaultFrame, defaultBmp);
-//                    imageView.setImageBitmap(defaultBmp);
-//                }
-
                 break;
             case Constants.CARDBOARD_VIEW:
 
@@ -225,6 +218,8 @@ public class MainActivity extends CardboardActivity {
                 viewFlipper.setInAnimation(context, R.anim.slide_in_from_left);
                 viewFlipper.setOutAnimation(context, R.anim.slide_out_to_right);
                 viewFlipper.showNext();
+
+
 
                 TextureHelper.setMat(img);
                 break;

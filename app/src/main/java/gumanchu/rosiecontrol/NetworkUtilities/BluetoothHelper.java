@@ -5,9 +5,12 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.util.Log;
 
+import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.highgui.Highgui;
@@ -19,11 +22,13 @@ import java.io.IOException;
 
 import gumanchu.rosiecontrol.CardboardUtilities.TextureHelper;
 import gumanchu.rosiecontrol.Constants;
+import gumanchu.rosiecontrol.Controller;
+import gumanchu.rosiecontrol.MainActivity;
 
 /**
  * Class holding functions for network connections
  */
-public class BluetoothHelper extends AsyncTask<Void, Boolean, Void> implements NetworkHelper {
+public class BluetoothHelper extends AsyncTask<Void, Mat, Void> implements NetworkHelper {
     private static final String TAG = "BluetoothHelper";
 
     Context context;
@@ -31,6 +36,7 @@ public class BluetoothHelper extends AsyncTask<Void, Boolean, Void> implements N
 
     boolean connected = false;
 
+    Handler controlHandle;
     DataInputStream dataInputStream;
     DataOutputStream dataOutputStream;
 
@@ -46,6 +52,7 @@ public class BluetoothHelper extends AsyncTask<Void, Boolean, Void> implements N
     long imgSize;
     byte[] data;
     Mat buff, rev, ret;
+    Bitmap bmp;
 
     @Override
     public void connect(Context context) {
@@ -75,6 +82,8 @@ public class BluetoothHelper extends AsyncTask<Void, Boolean, Void> implements N
         if (bluetoothSocket.isConnected()) {
             this.dialog.dismiss();
             connected = true;
+            MainActivity.initView();
+            this.execute();
         }
 
     }
@@ -102,6 +111,31 @@ public class BluetoothHelper extends AsyncTask<Void, Boolean, Void> implements N
             Log.i(TAG, "Force closing dialog.");
             this.dialog.dismiss();
         }
+
+
+        rev = new Mat(480, 640, CvType.CV_8UC3);
+        ret = new Mat(480, 640, CvType.CV_8UC3);
+        bmp = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
+
+        controlHandle = new Handler();
+        controlHandle.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (bluetoothSocket.isConnected()) {
+                        dataOutputStream.writeInt(Controller.keyDirection);
+                        dataOutputStream.writeInt(Controller.keyRotation);
+                        dataOutputStream.writeInt(Controller.orientationX);
+                        dataOutputStream.writeInt(Controller.orientationY);
+                        dataOutputStream.flush();
+
+                        controlHandle.postDelayed(this, 75);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 1000);
     }
 
     @Override
@@ -123,7 +157,8 @@ public class BluetoothHelper extends AsyncTask<Void, Boolean, Void> implements N
 
                 Imgproc.cvtColor(rev, ret, Imgproc.COLOR_RGB2BGR);
 
-                TextureHelper.setMat(ret);
+                publishProgress(ret);
+
                 Log.i(TAG, "Got frame");
             }
         } catch (IOException e) {
@@ -134,8 +169,16 @@ public class BluetoothHelper extends AsyncTask<Void, Boolean, Void> implements N
     }
 
     @Override
-    protected void onProgressUpdate(Boolean ... status) {
-
+    protected void onProgressUpdate(Mat ... progress) {
+        switch (MainActivity.rosieView) {
+            case Constants.CARDBOARD_VIEW:
+                TextureHelper.setMat(progress[0]);
+                break;
+            case Constants.DEFAULT_VIEW:
+                Utils.matToBitmap(progress[0], bmp);
+                MainActivity.imageView.setImageBitmap(bmp);
+                break;
+        }
     }
 
     @Override

@@ -49,7 +49,6 @@ public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > imple
      * Streaming stuff
      */
     int bytes, size;
-    long imgSize;
     byte[] data;
     Mat buff, rev, ret;
     Bitmap bmp;
@@ -95,25 +94,25 @@ public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > imple
         ret = new Mat(480, 640, CvType.CV_8UC3);
         bmp = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
 
-//        controlHandle = new Handler();
-//        controlHandle.postDelayed(new Runnable() {
-//            @Override
-//            public void run() {
-//                try {
-//                    if (serverSocket.isConnected()) {
-//                        dataOutputStream.writeInt(Controller.keyDirection);
-//                        dataOutputStream.writeInt(Controller.keyRotation);
-//                        dataOutputStream.writeInt(Controller.orientationX);
-//                        dataOutputStream.writeInt(Controller.orientationY);
-//                        dataOutputStream.flush();
-//
-//                        controlHandle.postDelayed(this, 75);
-//                    }
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        }, 1000);
+        controlHandle = new Handler();
+        controlHandle.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (serverSocket.isConnected()) {
+                        dataOutputStream.writeInt(Controller.keyDirection);
+                        dataOutputStream.writeInt(Controller.keyRotation);
+                        dataOutputStream.writeInt(Controller.orientationX);
+                        dataOutputStream.writeInt(Controller.orientationY);
+                        dataOutputStream.flush();
+
+                        controlHandle.postDelayed(this, 75);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }, 1000);
     }
 
     @Override
@@ -134,7 +133,7 @@ public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > imple
         publishProgress(wrapper);
 
         try {
-            Thread.sleep(3000);
+            Thread.sleep(500);
 
             dataInputStream = new DataInputStream(serverSocket.getInputStream());
             dataOutputStream = new DataOutputStream(serverSocket.getOutputStream());
@@ -158,16 +157,10 @@ public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > imple
 
                 Imgproc.cvtColor(rev, ret, Imgproc.COLOR_RGB2BGR);
 
-                TextureHelper.setMat(ret);
-                Utils.matToBitmap(ret, bmp);
-                wrapper.img = bmp;
+                wrapper.img = ret;
                 publishProgress(wrapper);
-//                MainActivity.imageView.setImageBitmap(bmp);
-//                Log.i(TAG, "Got frame");
                 Thread.sleep(75);
             }
-
-
 
         } catch (Exception e ) {
             e.printStackTrace();
@@ -179,7 +172,7 @@ public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > imple
     class Wrapper {
         int type;
         Boolean status;
-        Bitmap img;
+        Mat img;
     }
 
     @Override
@@ -196,7 +189,15 @@ public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > imple
                 MainActivity.failedConnection();
             }
         } else if (wrap[0].type == 1) {
-            MainActivity.imageView.setImageBitmap(wrap[0].img);
+            switch (MainActivity.rosieView) {
+                case Constants.CARDBOARD_VIEW:
+                    TextureHelper.setMat(wrap[0].img);
+                    break;
+                case Constants.DEFAULT_VIEW:
+                    Utils.matToBitmap(wrap[0].img, bmp);
+                    MainActivity.imageView.setImageBitmap(bmp);
+                    break;
+            }
         }
 
     }
