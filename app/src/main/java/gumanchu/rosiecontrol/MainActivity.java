@@ -1,5 +1,6 @@
 package gumanchu.rosiecontrol;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
@@ -38,29 +39,30 @@ public class MainActivity extends CardboardActivity {
 
     private int controlMethod = Constants.CONTROL_TYPE_BOTH;
     private int connectionType = Constants.CONNECTION_TYPE_INET;
-    private int rosieView = Constants.DEFAULT_VIEW;
+    private static int rosieView = Constants.DEFAULT_VIEW;
     private String rosieIP = Constants.SERVER_IP;
 
     Controller controller;
 
-    NetworkHelper nHelper;
+    static NetworkHelper nHelper;
     Handler handler;
 
-    Mat defaultFrame;
-    Bitmap defaultBmp;
+    static Mat defaultFrame;
+    static Bitmap defaultBmp;
+    static Context context;
 
     /*
      * UI Elements
      */
-    private ViewFlipper viewFlipper;
+    private static ViewFlipper viewFlipper;
 
-    CardboardRenderer cardboardRenderer;
-    CardboardView cardboardView;
+    static CardboardRenderer cardboardRenderer;
+    static CardboardView cardboardView;
 
-    ImageView imageView;
+    public static ImageView imageView;
 
 
-    TextView tvStatus;
+    static TextView tvStatus;
     RadioButton bt1;
     RadioButton bt2;
     RadioButton bt3;
@@ -89,6 +91,7 @@ public class MainActivity extends CardboardActivity {
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+        context = this.getApplicationContext();
         setContentView(R.layout.activity_main);
 
         viewFlipper = (ViewFlipper) findViewById(R.id.viewFlipper);
@@ -147,6 +150,13 @@ public class MainActivity extends CardboardActivity {
         tvStatus.setText("Preparing Connection");
         Log.i(TAG, "In button click");
 
+        switch (rosieView) {
+            case Constants.CARDBOARD_VIEW:
+                cardboardView = (CardboardView) findViewById(R.id.cardboard_view);
+                setCardboardView(cardboardView);
+                break;
+        }
+
 
         switch (connectionType) {
             case Constants.CONNECTION_TYPE_INET:
@@ -154,12 +164,9 @@ public class MainActivity extends CardboardActivity {
                 nHelper = new InetHelper();
                 nHelper.connect(this);
 
-                handler.postDelayed(new Runnable() {
-                    public void run() {
-                        Log.i(TAG, "In handler run");
-                        initView();
-                    }
-                }, 5000);
+                //TODO: make inintView static and access from asynctask
+                //TODO: try passing viewflipper to asynctask
+                //TODO: try making viewFlipper static to directly access ?
 
                 break;
             case Constants.CONNECTION_TYPE_BTH:
@@ -171,18 +178,18 @@ public class MainActivity extends CardboardActivity {
         }
     }
 
-    public void initView() {
+    public static void failedConnection() {
+        tvStatus.setText("Failed to connect to Rosie via Wifi");
+    }
 
-        if (nHelper.isConnected()) {
-            tvStatus.setText("Connected to Rosie via Wifi");
-        } else {
-            tvStatus.setText("Failed to connect to Rosie via Wifi");
-        }
+    public static void initView() {
+
+        tvStatus.setText("Connected to Rosie via Wifi");
 
         Mat img = new Mat(480, 640, CvType.CV_8UC3);
 
         try {
-            img = Utils.loadResource(this, R.drawable.sad_danbo);
+            img = Utils.loadResource(context, R.drawable.sad_danbo);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -190,35 +197,33 @@ public class MainActivity extends CardboardActivity {
         switch(rosieView) {
             case Constants.DEFAULT_VIEW:
 
-                viewFlipper.setInAnimation(this, R.anim.slide_in_from_right);
-                viewFlipper.setOutAnimation(this, R.anim.slide_out_to_left);
+                viewFlipper.setInAnimation(context, R.anim.slide_in_from_right);
+                viewFlipper.setOutAnimation(context, R.anim.slide_out_to_left);
                 viewFlipper.showPrevious();
 
                 imageView.setImageResource(R.drawable.sad_danbo);
 
-
-
                 defaultFrame = new Mat(480, 640, CvType.CV_8UC3);
                 defaultBmp = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
 
-                while (nHelper.isConnected()) {
-                    TextureHelper.getMat(defaultFrame);
-                    Utils.matToBitmap(defaultFrame, defaultBmp);
-                    imageView.setImageBitmap(defaultBmp);
-                }
+                Log.i(TAG, "status: " + nHelper.isConnected());
+
+//                while (nHelper.isConnected()) {
+////                    Log.i(TAG, "doing stuff");
+//                    TextureHelper.getMat(defaultFrame);
+//                    Utils.matToBitmap(defaultFrame, defaultBmp);
+//                    imageView.setImageBitmap(defaultBmp);
+//                }
 
                 break;
             case Constants.CARDBOARD_VIEW:
 
-                cardboardView = (CardboardView) findViewById(R.id.cardboard_view);
-                setCardboardView(cardboardView);
-
-                cardboardRenderer = new CardboardRenderer(this);
+                cardboardRenderer = new CardboardRenderer(context);
                 cardboardView.setRenderer(cardboardRenderer);
                 cardboardView.onResume();
 
-                viewFlipper.setInAnimation(this, R.anim.slide_in_from_left);
-                viewFlipper.setOutAnimation(this, R.anim.slide_out_to_right);
+                viewFlipper.setInAnimation(context, R.anim.slide_in_from_left);
+                viewFlipper.setOutAnimation(context, R.anim.slide_out_to_right);
                 viewFlipper.showNext();
 
                 TextureHelper.setMat(img);

@@ -3,10 +3,12 @@ package gumanchu.rosiecontrol.NetworkUtilities;
 
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.util.Log;
 
+import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.highgui.Highgui;
@@ -27,7 +29,7 @@ import gumanchu.rosiecontrol.MainActivity;
 /**
  * Class with helper functions for internet connection.
  */
-public class InetHelper extends AsyncTask<Void, Boolean, Void > implements NetworkHelper {
+public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > implements NetworkHelper {
 
     private static final String TAG = "InetHelper";
 
@@ -50,10 +52,13 @@ public class InetHelper extends AsyncTask<Void, Boolean, Void > implements Netwo
     long imgSize;
     byte[] data;
     Mat buff, rev, ret;
+    Bitmap bmp;
 
     @Override
     public void connect(Context context) {
         Log.i(TAG, "Attempting to connect via Inet");
+
+        //TODO: try to put connection stuff in connect()
 
         this.context = context;
         dialog = new ProgressDialog(this.context);
@@ -88,6 +93,7 @@ public class InetHelper extends AsyncTask<Void, Boolean, Void > implements Netwo
 
         rev = new Mat(480, 640, CvType.CV_8UC3);
         ret = new Mat(480, 640, CvType.CV_8UC3);
+        bmp = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
 
 //        controlHandle = new Handler();
 //        controlHandle.postDelayed(new Runnable() {
@@ -113,16 +119,27 @@ public class InetHelper extends AsyncTask<Void, Boolean, Void > implements Netwo
     @Override
     protected Void doInBackground(final Void ... unused) {
 
+        Wrapper wrapper = new Wrapper();
+
         try {
             serverAddress = InetAddress.getByName(Constants.SERVER_IP);
             serverSocket = new Socket();
             serverSocket.connect(new InetSocketAddress(Constants.SERVER_IP, Constants.SERVER_PORT), 5000);
+        } catch (Exception e ) {
+            e.printStackTrace();
+        }
 
-            publishProgress(serverSocket.isConnected());
+        wrapper.type = 0;
+        wrapper.status = serverSocket.isConnected();
+        publishProgress(wrapper);
+
+        try {
+            Thread.sleep(3000);
 
             dataInputStream = new DataInputStream(serverSocket.getInputStream());
             dataOutputStream = new DataOutputStream(serverSocket.getOutputStream());
 
+            wrapper.type = 1;
 
             while (serverSocket.isConnected()) {
                 bytes = 0;
@@ -142,30 +159,46 @@ public class InetHelper extends AsyncTask<Void, Boolean, Void > implements Netwo
                 Imgproc.cvtColor(rev, ret, Imgproc.COLOR_RGB2BGR);
 
                 TextureHelper.setMat(ret);
-                Log.i(TAG, "Got frame");
+                Utils.matToBitmap(ret, bmp);
+                wrapper.img = bmp;
+                publishProgress(wrapper);
+//                MainActivity.imageView.setImageBitmap(bmp);
+//                Log.i(TAG, "Got frame");
                 Thread.sleep(75);
             }
 
 
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (Exception e ) {
             e.printStackTrace();
         }
 
         return null;
     }
 
-    @Override
-    protected void onProgressUpdate(Boolean ... status) {
-        if (status[0])
-            Log.i(TAG, "Successful connection");
-        else
-            Log.i(TAG, "Failed connection");
-        this.dialog.dismiss();
+    class Wrapper {
+        int type;
+        Boolean status;
+        Bitmap img;
+    }
 
-        connected = status[0];
+    @Override
+    protected void onProgressUpdate(InetHelper.Wrapper... wrap) {
+        Log.i(TAG, "In onProgressUpdate");
+        if (wrap[0].type == 0) {
+            this.dialog.dismiss();
+            connected = wrap[0].status;
+            if (connected) {
+                Log.i(TAG, "Successful connection");
+                MainActivity.initView();
+            } else {
+                Log.i(TAG, "Failed connection");
+                MainActivity.failedConnection();
+            }
+        } else if (wrap[0].type == 1) {
+            MainActivity.imageView.setImageBitmap(wrap[0].img);
+        }
+
     }
 
     @Override
