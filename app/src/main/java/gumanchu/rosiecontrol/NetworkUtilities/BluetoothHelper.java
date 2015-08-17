@@ -55,8 +55,9 @@ public class BluetoothHelper extends AsyncTask<Void, Mat, Void> implements Netwo
     Bitmap bmp;
 
     @Override
-    public void connect(Context context) {
+    public void connect(Context context, String url) {
 
+        // Connects to the bluetooth server.
         this.context = context;
         dialog = new ProgressDialog(this.context);
 
@@ -117,6 +118,7 @@ public class BluetoothHelper extends AsyncTask<Void, Mat, Void> implements Netwo
         ret = new Mat(480, 640, CvType.CV_8UC3);
         bmp = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
 
+        // Send control information in a separate thread.
         controlHandle = new Handler();
         controlHandle.postDelayed(new Runnable() {
             @Override
@@ -140,6 +142,7 @@ public class BluetoothHelper extends AsyncTask<Void, Mat, Void> implements Netwo
 
     @Override
     protected Void doInBackground(final Void ... unused) {
+        // Read image information
         try {
             while (bluetoothSocket.isConnected()) {
                 bytes = 0;
@@ -170,6 +173,7 @@ public class BluetoothHelper extends AsyncTask<Void, Mat, Void> implements Netwo
 
     @Override
     protected void onProgressUpdate(Mat ... progress) {
+        // Write the image data to the appropriate view.
         switch (MainActivity.rosieView) {
             case Constants.CARDBOARD_VIEW:
                 TextureHelper.setMat(progress[0]);

@@ -3,6 +3,11 @@ package gumanchu.rosiecontrol.CardboardUtilities;
 import android.opengl.GLES20;
 import android.util.Log;
 
+/**
+ * Helper class to create shaders for the Cardboard View.
+ *
+ * This shouldn't need to be changed as long as the overall Cardboard View isn't changed.
+ */
 public class ShaderHelper
 {
     private static final String TAG = "ShaderHelper";

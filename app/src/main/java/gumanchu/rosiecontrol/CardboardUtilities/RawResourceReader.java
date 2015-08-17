@@ -7,6 +7,9 @@ import java.io.InputStreamReader;
 
 import android.content.Context;
 
+/**
+ * Helper class to read resource information from raw text files.
+ */
 public class RawResourceReader
 {
     public static String readTextFileFromRawResource(final Context context,

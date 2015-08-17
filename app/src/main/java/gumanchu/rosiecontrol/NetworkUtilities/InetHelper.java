@@ -27,18 +27,20 @@ import gumanchu.rosiecontrol.Controller;
 import gumanchu.rosiecontrol.MainActivity;
 
 /**
- * Class with helper functions for internet connection.
+ * Class with helper functions for WiFi connection.
  */
 public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > implements NetworkHelper {
-
     private static final String TAG = "InetHelper";
 
     Handler controlHandle;
-    DataInputStream dataInputStream;
-    DataOutputStream dataOutputStream;
 
+    /*
+     * Networking objects.
+     */
     InetAddress serverAddress;
     Socket serverSocket;
+    DataInputStream dataInputStream;
+    DataOutputStream dataOutputStream;
 
     Context context;
     private ProgressDialog dialog;
@@ -46,18 +48,25 @@ public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > imple
     boolean connected = false;
 
     /*
-     * Streaming stuff
+     * Objects used for streaming.
      */
     int bytes, size;
     byte[] data;
     Mat buff, rev, ret;
     Bitmap bmp;
 
+    private String serverIP;
+
+    /*
+     * Function meant to establish the connection between the device and Rosie's server.
+     */
     @Override
-    public void connect(Context context) {
+    public void connect(Context context, String url) {
         Log.i(TAG, "Attempting to connect via Inet");
 
-        //TODO: try to put connection stuff in connect()
+        //TODO: try to put connection stuff (Sockets, etc) in connect()
+
+        serverIP = url;
 
         this.context = context;
         dialog = new ProgressDialog(this.context);
@@ -78,11 +87,14 @@ public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > imple
         }
     }
 
+    @Override
     public void read() {
+        //TODO: Implement.
     }
 
+    @Override
     public void write() {
-
+        //TODO: Implement.
     }
 
     @Override
@@ -94,52 +106,42 @@ public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > imple
         ret = new Mat(480, 640, CvType.CV_8UC3);
         bmp = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
 
-        controlHandle = new Handler();
-        controlHandle.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (serverSocket.isConnected()) {
-                        dataOutputStream.writeInt(Controller.keyDirection);
-                        dataOutputStream.writeInt(Controller.keyRotation);
-                        dataOutputStream.writeInt(Controller.orientationX);
-                        dataOutputStream.writeInt(Controller.orientationY);
-                        dataOutputStream.flush();
-
-                        controlHandle.postDelayed(this, 75);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }, 1000);
     }
 
     @Override
     protected Void doInBackground(final Void ... unused) {
 
+        /*
+         * Sets up wrapper class for this AsyncTask.
+         */
         Wrapper wrapper = new Wrapper();
 
         try {
-            serverAddress = InetAddress.getByName(Constants.SERVER_IP);
+            serverAddress = InetAddress.getByName(serverIP);
             serverSocket = new Socket();
             serverSocket.connect(new InetSocketAddress(Constants.SERVER_IP, Constants.SERVER_PORT), 5000);
         } catch (Exception e ) {
             e.printStackTrace();
         }
 
+        /*
+         * Sends a signal to stop the progress dialog
+         */
         wrapper.type = 0;
         wrapper.status = serverSocket.isConnected();
         publishProgress(wrapper);
 
         try {
-            Thread.sleep(500);
+            Thread.sleep(250);
 
             dataInputStream = new DataInputStream(serverSocket.getInputStream());
             dataOutputStream = new DataOutputStream(serverSocket.getOutputStream());
 
             wrapper.type = 1;
 
+            /*
+             * Loop to continually read image data.
+             */
             while (serverSocket.isConnected()) {
                 bytes = 0;
 
@@ -158,8 +160,8 @@ public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > imple
                 Imgproc.cvtColor(rev, ret, Imgproc.COLOR_RGB2BGR);
 
                 wrapper.img = ret;
+                // Display image to appropriate view.
                 publishProgress(wrapper);
-                Thread.sleep(75);
             }
 
         } catch (Exception e ) {
@@ -177,18 +179,45 @@ public class InetHelper extends AsyncTask<Void, InetHelper.Wrapper, Void > imple
 
     @Override
     protected void onProgressUpdate(InetHelper.Wrapper... wrap) {
-        Log.i(TAG, "In onProgressUpdate");
+//        Log.i(TAG, "In onProgressUpdate");
         if (wrap[0].type == 0) {
+            // Ran only after connection is established.
             this.dialog.dismiss();
             connected = wrap[0].status;
             if (connected) {
                 Log.i(TAG, "Successful connection");
+
+                // Block to write control data to the server.
+                controlHandle = new Handler();
+                controlHandle.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            if (serverSocket.isConnected()) {
+                                dataOutputStream.writeInt(Controller.keyDirection);
+                                dataOutputStream.writeInt(Controller.keyRotation);
+                                dataOutputStream.writeInt(Controller.orientationX);
+                                dataOutputStream.writeInt(Controller.orientationY);
+                                dataOutputStream.flush();
+//                                Log.i(TAG, "stuff: " + Controller.keyDirection + " " + Controller.keyRotation
+//                                        + " " + Controller.orientationX + " " + Controller.orientationY);
+
+                                controlHandle.postDelayed(this, 75);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, 1000);
+
+
                 MainActivity.initView();
             } else {
                 Log.i(TAG, "Failed connection");
                 MainActivity.failedConnection();
             }
         } else if (wrap[0].type == 1) {
+            // Ran when a new image is read.
             switch (MainActivity.rosieView) {
                 case Constants.CARDBOARD_VIEW:
                     TextureHelper.setMat(wrap[0].img);

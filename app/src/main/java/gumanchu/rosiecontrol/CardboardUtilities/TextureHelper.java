@@ -20,6 +20,11 @@ import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.nio.ShortBuffer;
 
+
+/**
+ * Class to create a simple, stationary cube in front of the view and display a texture on it.
+ * Used to display the image data from Rosie in a cardboard view.
+ */
 public class TextureHelper {
 
     private static final String TAG = "TextureHelper";
@@ -33,6 +38,9 @@ public class TextureHelper {
 
     public static Bitmap frame = Bitmap.createBitmap(640, 480, Bitmap.Config.ARGB_8888);
 
+    /*
+     * Loads a bitmap image stored as a resource.
+     */
     public static int loadTexture(final Context context, final int resourceId)
     {
         final int[] textureHandle = new int[1];
@@ -70,6 +78,9 @@ public class TextureHelper {
         return textureHandle[0];
     }
 
+    /*
+     * Method used to store Matrix locally.
+     */
     public static void setMat(Mat mat) {
         mat.copyTo(img);
     }
@@ -78,6 +89,9 @@ public class TextureHelper {
         img.copyTo(dst);
     }
 
+    /*
+     * Creates a texture from an OpenCV Mat image.
+     */
     public static int loadMatTexture() {
         final int[] textureHandle = new int[1];
 

@@ -17,6 +17,13 @@ import org.opencv.engine.OpenCVEngineInterface;
 import java.io.File;
 import java.util.StringTokenizer;
 
+/**
+ * Class used to initialize the OpenCV library if it is available. Also provides functions to
+ * attempt to install OpenCV if it is not available on the device.
+ *
+ * This class should not be modified in any situation, but can be used in all Android applications
+ * that require OpenCV.
+ */
 class AsyncServiceHelper
 {
     public static boolean initOpenCV(String Version, final Context AppContext,
@@ -199,7 +206,7 @@ class AsyncServiceHelper
                                         if (mEngineService.installVersion(mOpenCVersion))
                                         {
                                             mLibraryInstallationProgress = true;
-                                            Log.d(TAG, "Package installation statred");
+                                            Log.d(TAG, "Package installation started");
                                             Log.d(TAG, "Unbind from service");
                                             mAppContext.unbindService(mServiceConnection);
                                         }
@@ -213,7 +220,7 @@ class AsyncServiceHelper
                                             mUserAppCallback.onManagerConnected(LoaderCallbackInterface.MARKET_ERROR);
                                         }
                                     } catch (RemoteException e) {
-                                        e.printStackTrace();;
+                                        e.printStackTrace();
                                         Log.d(TAG, "Init finished with status " + LoaderCallbackInterface.INIT_FAILED);
                                         Log.d(TAG, "Unbind from service");
                                         mAppContext.unbindService(mServiceConnection);
@@ -289,7 +296,6 @@ class AsyncServiceHelper
 
                             mUserAppCallback.onPackageInstall(InstallCallbackInterface.INSTALLATION_PROGRESS, WaitQuery);
                         }
-                        return;
                     }
                     else
                     {
@@ -339,21 +345,18 @@ class AsyncServiceHelper
         }
     };
 
-    private boolean loadLibrary(String AbsPath)
-    {
+    private boolean loadLibrary(String AbsPath) {
         boolean result = true;
 
         Log.d(TAG, "Trying to load library " + AbsPath);
-        try
-        {
+        try {
             System.load(AbsPath);
             Log.d(TAG, "OpenCV libs init was ok!");
         }
-        catch(UnsatisfiedLinkError e)
-        {
+        catch(UnsatisfiedLinkError e) {
             Log.d(TAG, "Cannot load library \"" + AbsPath + "\"");
             e.printStackTrace();
-            result &= false;
+            result = false;
         }
 
         return result;
@@ -379,7 +382,7 @@ class AsyncServiceHelper
             {
                 // If the dependencies list is not defined or empty.
                 String AbsLibraryPath = Path + File.separator + "libopencv_java.so";
-                result &= loadLibrary(AbsLibraryPath);
+                result = loadLibrary(AbsLibraryPath);
             }
 
             return result;

@@ -20,7 +20,10 @@ import gumanchu.rosiecontrol.Controller;
 import gumanchu.rosiecontrol.R;
 
 /**
- * Renderer for stuff
+ * OpenGL Renderer for this application.
+ *
+ * I would provide more information and documentation for this, but I don't even know how
+ * most of this works. :/
  *
  * Created by gu on 6/3/15.
  */
